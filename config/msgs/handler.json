@@ -9,7 +9,7 @@
     "infoTitulo": "*━━━━━━━━━━━━━━━━━━━━━━━━━━━━*\n    ℹ️  *{nomeBot}*\n*━━━━━━━━━━━━━━━━━━━━━━━━━━━━*\n\n🤖 Nome: *{nomeBot}*\n📱 Número: `{numero}`\n👑 Dono: `{numeroDono}`\n⚙️ Prefixo: *{prefixo}*\n🌍 Fuso: {fuso}\n🧠 IA: {ia}\n🛡️ Admin aqui: {admin}\n📦 Versão: 1.0.0 ESM\n\n_Usa `{prefixo}ajuda` para ver todos os sistemas._",
     "donoTitulo": "👑 *Dono do {nomeBot}*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n🧑 Nome: *{donoNome}*\n📱 Contato: wa.me/{donoNum}\n📟 Número: `+{donoNum}`\n\n🤖 Bot: *{nomeBot}*\n📦 Grupos ativos: *{grupos}*\n⚙️ Prefixo: *{prefixo}*\n\n_Para falar com o dono, manda mensagem para o número acima_ 👆",
     "polarApenasAdmin": "🤖 Os comandos de IA estão disponíveis apenas para admins neste grupo.",
-    "polarSemTexto": "❓ Ex: *{prefixo}polar Qual é a capital de Portugal?*",
+    "polarSemTexto": "❓ Ex: *{prefixo}polar Qual é a capital do Brasil?*",
     "polarErroIA": "❌ Sem resposta da IA. Tenta novamente.",
     "polarErroContato": "❌ Erro ao contactar a IA. Tenta novamente mais tarde.",
     "vozVipExclusivo": "👑 *!voz é exclusivo para VIPs!*\n\nOs VIPs podem transcrever áudios ilimitadamente.\n_Compra VIP: *{prefixo}vip*_",
