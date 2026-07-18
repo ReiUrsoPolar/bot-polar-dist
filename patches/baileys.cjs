@@ -6,6 +6,17 @@ const { readFileSync, writeFileSync } = require('fs');
 
 const MSG_SEND = 'node_modules/@whiskeysockets/baileys/lib/Socket/messages-send.js';
 
+// A partir do Baileys 7.0 o crash `me.lid.split()` DEIXOU de existir (o 7.0
+// reescreveu o addressing com LID nativo). Nessas versões este patch é
+// desnecessário — saímos em silêncio para não assustar com "padrão não encontrado".
+try {
+  const _v = require('@whiskeysockets/baileys/package.json').version || '';
+  if (/^[7-9]\./.test(_v) || /^\d{2,}\./.test(_v)) {
+    console.log('[patch] Baileys ' + _v + ' — me.lid null-guard já não é necessário (LID nativo). Nada a fazer.');
+    process.exit(0);
+  }
+} catch {}
+
 function applyPatch(file, description, oldStr, newStr) {
   try {
     let c = readFileSync(file, 'utf8');
