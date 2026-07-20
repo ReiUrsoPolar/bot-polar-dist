@@ -105,9 +105,11 @@ auto_atualizar() {
 # ── Verificar e instalar dependências ────────────────────────────────
 instalar_deps() {
   echo -e "${YELLOW}  ↓  A instalar/atualizar dependências...${NC}"
-  npm install --no-fund --no-audit --prefer-offline 2>&1 | grep -v "^npm warn" | grep -v "^$"
-  echo -e "${YELLOW}  ↓  A compilar better-sqlite3...${NC}"
-  npm rebuild better-sqlite3 --no-fund 2>&1 | grep -v "^npm warn"
+  # --ignore-scripts: NÃO correr scripts de build (npm rebuild/node-gyp) dentro do
+  # sandbox systemd — o SystemCallFilter bloqueia syscalls de compilação →
+  # "Bad system call" → loop de crash. O painel recompila o better-sqlite3 fora
+  # do sandbox. O patch do Baileys é aplicado à parte por aplicar_patches().
+  npm install --ignore-scripts --no-fund --no-audit --prefer-offline 2>&1 | grep -v "^npm warn" | grep -v "^$"
   echo -e "${GREEN}  ✓  Dependências prontas!${NC}\n"
 }
 
@@ -132,13 +134,17 @@ verificar_deps() {
     return
   fi
 
-  # Dependências OK — verificar só better-sqlite3
+  # Dependências OK — verificar só better-sqlite3.
   NODE_VER=$(node -e "process.stdout.write(process.version)")
-  SQLITE_OK=$(node -e "try{require('./node_modules/better-sqlite3');process.stdout.write('ok')}catch(e){process.stdout.write('no')}" 2>/dev/null)
+  # ABRE um DB em memória — força o carregamento do binário nativo (.node).
+  # require() sozinho não carrega o .node, por isso não detetava um build partido.
+  SQLITE_OK=$(node -e "try{new (require('./node_modules/better-sqlite3'))(':memory:').close();process.stdout.write('ok')}catch(e){process.stdout.write('no')}" 2>/dev/null)
   if [ "$SQLITE_OK" != "ok" ]; then
-    echo -e "${YELLOW}  ↗  better-sqlite3 precisa de recompilação (Node ${NODE_VER})...${NC}"
-    npm rebuild better-sqlite3 --no-fund 2>&1 | grep -v "^npm warn"
-    echo -e "${GREEN}  ✓  Compilado!${NC}\n"
+    # NÃO recompilar dentro do sandbox systemd (make/node-gyp bloqueados →
+    # "Bad system call" → loop de crash). Sai com código 7 para o painel
+    # recompilar o better-sqlite3 fora do sandbox e reiniciar o bot.
+    echo -e "${YELLOW}  ↗  better-sqlite3 precisa de recompilação (Node ${NODE_VER}) — a deixar o painel recompilar fora do sandbox...${NC}"
+    exit 7
   else
     echo -e "${GREEN}  ✓  Dependências OK (Node ${NODE_VER})${NC}\n"
   fi

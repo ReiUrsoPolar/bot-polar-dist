@@ -8,7 +8,7 @@
     "start": "bash start.sh",
     "dev": "node index.js",
     "test": "vitest run",
-    "postinstall": "npm rebuild better-sqlite3 --no-fund || true; node patches/baileys.cjs || true"
+    "postinstall": "node patches/baileys.cjs || true"
   },
   "devDependencies": {
     "vitest": "^1.0.0"
