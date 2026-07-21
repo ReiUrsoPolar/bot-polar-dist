@@ -102,6 +102,14 @@ auto_atualizar() {
   fi
 }
 
+# Hash SÓ das dependências (não do package.json inteiro). Assim, updates que
+# só mudam scripts/version/postinstall (código) NÃO disparam uma reinstalação
+# do node_modules — que no host podia levar à recompilação/limpeza do módulo.
+# Só uma mudança real em dependencies/optionalDependencies volta a instalar.
+pkg_deps_hash() {
+  node -e "const p=require('./package.json');process.stdout.write(JSON.stringify([p.dependencies||{},p.optionalDependencies||{}]))" 2>/dev/null | md5sum | cut -d' ' -f1
+}
+
 # ── Verificar e instalar dependências ────────────────────────────────
 instalar_deps() {
   echo -e "${YELLOW}  ↓  A instalar/atualizar dependências...${NC}"
@@ -119,18 +127,19 @@ verificar_deps() {
     echo -e "${YELLOW}  ⏳  Este processo pode demorar entre 3 a 10 minutos${NC}"
     echo -e "${YELLOW}     (a compilar módulos nativos — não feches o painel).${NC}\n"
     instalar_deps
-    md5sum package.json > node_modules/.pkg_hash 2>/dev/null || true
+    pkg_deps_hash > node_modules/.pkg_hash 2>/dev/null || true
     return
   fi
 
-  # Comparar hash do package.json (não timestamp — git reset atualiza timestamps sem mudar conteúdo)
-  HASH_ATUAL=$(md5sum package.json 2>/dev/null | cut -d' ' -f1)
+  # Comparar hash SÓ das dependências (não do package.json inteiro nem do
+  # timestamp): updates de código/scripts não reinstalam o node_modules.
+  HASH_ATUAL=$(pkg_deps_hash)
   HASH_ANTERIOR=$(cat node_modules/.pkg_hash 2>/dev/null | cut -d' ' -f1)
 
-  if [ "$HASH_ATUAL" != "$HASH_ANTERIOR" ]; then
+  if [ -n "$HASH_ATUAL" ] && [ "$HASH_ATUAL" != "$HASH_ANTERIOR" ]; then
     echo -e "${YELLOW}  ↗  Dependências alteradas — a sincronizar...${NC}"
     instalar_deps
-    md5sum package.json > node_modules/.pkg_hash 2>/dev/null || true
+    pkg_deps_hash > node_modules/.pkg_hash 2>/dev/null || true
     return
   fi
 
