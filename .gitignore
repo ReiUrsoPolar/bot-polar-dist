@@ -63,3 +63,6 @@ tmp_versions.json
 polar-license-api/cd
 polar-license-api/flags
 polar-license-api/npx
+
+# grafo de conhecimento local (graphify)
+graphify-out/
