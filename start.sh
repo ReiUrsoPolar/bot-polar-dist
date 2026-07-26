@@ -118,7 +118,34 @@ instalar_deps() {
   # "Bad system call" → loop de crash. O painel recompila o better-sqlite3 fora
   # do sandbox. O patch do Baileys é aplicado à parte por aplicar_patches().
   npm install --ignore-scripts --no-fund --no-audit --prefer-offline 2>&1 | grep -v "^npm warn" | grep -v "^$"
+  binario_sqlite   # buscar já o .node certo, senão o painel compila do zero
   echo -e "${GREEN}  ✓  Dependências prontas!${NC}\n"
+}
+
+# ── Binário pré-compilado do better-sqlite3 ──────────────────────────
+# O install script do módulo é `prebuild-install || node-gyp rebuild`, e o
+# --ignore-scripts acima bloqueia OS DOIS — o módulo fica sem binário nenhum e
+# o painel tem de o COMPILAR do zero a cada arranque (minutos, e frágil).
+#
+# O prebuild-install apenas DESCARREGA o .node já compilado para o ABI deste
+# Node: não usa node-gyp, make nem compilador, por isso passa no sandbox do
+# systemd. Compilar fica como último recurso (exit 7), não como norma.
+binario_sqlite() {
+  [ -d node_modules/better-sqlite3 ] || return 0
+  # Já funciona? não mexer.
+  node -e "new (require('./node_modules/better-sqlite3'))(':memory:').close()" 2>/dev/null && return 0
+
+  local PB="node_modules/.bin/prebuild-install"
+  [ -x "$PB" ] || PB="../.bin/prebuild-install"
+  echo -e "${YELLOW}  ↓  A obter o binário pré-compilado do better-sqlite3 (sem compilar)...${NC}"
+  ( cd node_modules/better-sqlite3 && ../.bin/prebuild-install -r node --tag-prefix v ) >/dev/null 2>&1
+
+  if node -e "new (require('./node_modules/better-sqlite3'))(':memory:').close()" 2>/dev/null; then
+    echo -e "${GREEN}  ✓  Binário pronto — sem recompilação.${NC}"
+    return 0
+  fi
+  echo -e "${YELLOW}  ⚠  Sem binário pronto para este Node — o painel vai compilar.${NC}"
+  return 1
 }
 
 verificar_deps() {
@@ -149,9 +176,16 @@ verificar_deps() {
   # require() sozinho não carrega o .node, por isso não detetava um build partido.
   SQLITE_OK=$(node -e "try{new (require('./node_modules/better-sqlite3'))(':memory:').close();process.stdout.write('ok')}catch(e){process.stdout.write('no')}" 2>/dev/null)
   if [ "$SQLITE_OK" != "ok" ]; then
-    # NÃO recompilar dentro do sandbox systemd (make/node-gyp bloqueados →
-    # "Bad system call" → loop de crash). Sai com código 7 para o painel
-    # recompilar o better-sqlite3 fora do sandbox e reiniciar o bot.
+    # 1ª tentativa: descarregar o binário já compilado para este Node (rápido,
+    # sem compilador). Resolve o caso normal — ABI diferente depois de o painel
+    # atualizar o Node, ou node_modules instalado com --ignore-scripts.
+    if binario_sqlite; then
+      echo -e "${GREEN}  ✓  Dependências OK (Node ${NODE_VER})${NC}\n"
+      return 0
+    fi
+    # Último recurso: NÃO compilar dentro do sandbox systemd (make/node-gyp
+    # bloqueados → "Bad system call" → loop de crash). Sai com código 7 para o
+    # painel recompilar fora do sandbox e reiniciar o bot.
     echo -e "${YELLOW}  ↗  better-sqlite3 precisa de recompilação (Node ${NODE_VER}) — a deixar o painel recompilar fora do sandbox...${NC}"
     exit 7
   else
