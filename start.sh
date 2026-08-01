@@ -135,16 +135,35 @@ binario_sqlite() {
   # Já funciona? não mexer.
   node -e "new (require('./node_modules/better-sqlite3'))(':memory:').close()" 2>/dev/null && return 0
 
-  local PB="node_modules/.bin/prebuild-install"
-  [ -x "$PB" ] || PB="../.bin/prebuild-install"
-  echo -e "${YELLOW}  ↓  A obter o binário pré-compilado do better-sqlite3 (sem compilar)...${NC}"
-  ( cd node_modules/better-sqlite3 && ../.bin/prebuild-install -r node --tag-prefix v ) >/dev/null 2>&1
+  local NODE_V ABI PKG_V
+  NODE_V=$(node -p "process.version" 2>/dev/null)
+  ABI=$(node -p "process.versions.modules" 2>/dev/null)
+  PKG_V=$(node -p "require('./node_modules/better-sqlite3/package.json').version" 2>/dev/null)
+  echo -e "${YELLOW}  ↓  better-sqlite3 ${PKG_V} sem binário para Node ${NODE_V} (ABI ${ABI}) — a obter o pré-compilado...${NC}"
+
+  # 1ª via: o prebuild-install que vem com o próprio módulo.
+  local SAIDA=""
+  if [ -x node_modules/.bin/prebuild-install ]; then
+    SAIDA=$( ( cd node_modules/better-sqlite3 && ../../node_modules/.bin/prebuild-install -r node --tag-prefix v ) 2>&1 )
+  elif [ -x node_modules/better-sqlite3/node_modules/.bin/prebuild-install ]; then
+    SAIDA=$( ( cd node_modules/better-sqlite3 && ./node_modules/.bin/prebuild-install -r node --tag-prefix v ) 2>&1 )
+  else
+    # 2ª via: buscar a ferramenta ao registo (o --ignore-scripts pode tê-la deixado de fora).
+    SAIDA=$( ( cd node_modules/better-sqlite3 && npx --yes prebuild-install@7 -r node --tag-prefix v ) 2>&1 )
+  fi
 
   if node -e "new (require('./node_modules/better-sqlite3'))(':memory:').close()" 2>/dev/null; then
     echo -e "${GREEN}  ✓  Binário pronto — sem recompilação.${NC}"
     return 0
   fi
-  echo -e "${YELLOW}  ⚠  Sem binário pronto para este Node — o painel vai compilar.${NC}"
+
+  # NÃO engolir o erro: sem isto era impossível perceber porque falhava.
+  echo -e "${RED}  ✗  Não consegui obter binário pronto para Node ${NODE_V} (ABI ${ABI}).${NC}"
+  echo -e "${YELLOW}     Motivo:${NC}"
+  echo "$SAIDA" | grep -viE "^$" | tail -6 | sed 's/^/       /'
+  echo -e "${YELLOW}     → O painel vai compilar do zero (demora). Se isto se repetir, o better-sqlite3${NC}"
+  echo -e "${YELLOW}       ${PKG_V} pode não publicar binário para este Node — baixar a versão do Node${NC}"
+  echo -e "${YELLOW}       no painel (ex.: 20 ou 22) resolve.${NC}"
   return 1
 }
 
