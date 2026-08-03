@@ -66,7 +66,13 @@ auto_atualizar() {
     if curl -sL --max-time 60 -o "$TMP_ZIP" "$ZIP_URL" 2>/dev/null; then
       mkdir -p "$TMP_DIR"
       if unzip -q -o "$TMP_ZIP" -d "$TMP_DIR" 2>/dev/null; then
-        EXTRACTED=$(ls "$TMP_DIR" | head -1)
+        # A PRIMEIRA entrada podia ser um ficheiro — o .gitattributes vem antes
+        # por ordem alfabética — e a cópia ia buscar a pasta errada, dando
+        # "ENOTDIR: not a directory". Escolhe-se a primeira que É mesmo pasta.
+        EXTRACTED=""
+        for _e in "$TMP_DIR"/*; do
+          [ -d "$_e" ] && { EXTRACTED=$(basename "$_e"); break; }
+        done
         if [ -n "$EXTRACTED" ]; then
           if command -v rsync >/dev/null 2>&1; then
             rsync -a \
