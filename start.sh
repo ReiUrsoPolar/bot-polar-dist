@@ -68,18 +68,44 @@ auto_atualizar() {
       if unzip -q -o "$TMP_ZIP" -d "$TMP_DIR" 2>/dev/null; then
         EXTRACTED=$(ls "$TMP_DIR" | head -1)
         if [ -n "$EXTRACTED" ]; then
-          rsync -a \
-            --exclude='config/bot.json' \
-            --exclude='config/ia.json' \
-            --exclude='config/apis.json' \
-            --exclude='config/grupos.json' \
-            --exclude='config/licenca-bind.json' \
-            --exclude='config/licenca-inst.json' \
-            --exclude='session/' \
-            --exclude='auth_info_baileys/' \
-            --exclude='database/' \
-            --exclude='node_modules/' \
-            "$TMP_DIR/$EXTRACTED/" ./
+          if command -v rsync >/dev/null 2>&1; then
+            rsync -a \
+              --exclude='config/bot.json' \
+              --exclude='config/ia.json' \
+              --exclude='config/apis.json' \
+              --exclude='config/grupos.json' \
+              --exclude='config/licenca-bind.json' \
+              --exclude='config/licenca-inst.json' \
+              --exclude='session/' \
+              --exclude='auth_info_baileys/' \
+              --exclude='database/' \
+              --exclude='node_modules/' \
+              "$TMP_DIR/$EXTRACTED/" ./
+          else
+            # Painéis mínimos não trazem rsync — sem isto a atualização por
+            # download falhava em silêncio e o bot ficava para trás para sempre.
+            # O rm -rf antes do cp também resolve o destino com o TIPO trocado
+            # (pasta onde devia estar ficheiro), que rebentava a cópia com ENOTDIR.
+            for item in "$TMP_DIR/$EXTRACTED"/* "$TMP_DIR/$EXTRACTED"/.[!.]*; do
+              [ -e "$item" ] || continue
+              nome=$(basename "$item")
+              case "$nome" in
+                session|auth_info_baileys|database|node_modules|.tmp) continue ;;
+                config)
+                  mkdir -p ./config
+                  for cf in "$item"/*; do
+                    [ -e "$cf" ] || continue
+                    cnome=$(basename "$cf")
+                    case "$cnome" in
+                      bot.json|ia.json|apis.json|grupos.json|licenca-bind.json|licenca-inst.json|loja.json|menus|msgs) continue ;;
+                    esac
+                    rm -rf "./config/$cnome" && cp -a "$cf" "./config/$cnome"
+                  done
+                  continue ;;
+              esac
+              rm -rf "./$nome" && cp -a "$item" "./$nome"
+            done
+          fi
           # Forçar timestamp de package.json para agora para que verificar_deps detete a mudança
           touch package.json 2>/dev/null || true
           echo -e "${GREEN}  ✓  Atualizado via download!${NC}"

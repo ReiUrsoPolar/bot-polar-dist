@@ -1,0 +1,78 @@
+{
+  "_ajuda": {
+    "_titulo": "POLAR BOT — Comandos Personalizados",
+    "_descricao": "Cria ou edita comandos aqui sem precisar do WhatsApp. Reinicia o bot para aplicar. Comandos criados via !addcmd também aparecem aqui.",
+    "_nota": "Chaves que começam com _ são reservadas (documentação). Todas as outras são comandos reais.",
+    "_importante": "NÃO uses nomes de comandos internos do bot (ex: menu, ban, kick, addcmd, rank). Os comandos internos têm prioridade no dispatch, por isso um comando personalizado com esse nome NUNCA seria executado. Pelo WhatsApp (!addcmd) o bot bloqueia e avisa; aqui no ficheiro, evita-os tu. Criar com um nome já existente atualiza o comando (não duplica).",
+    "_campos": {
+      "nome": "Nome do comando (sem prefixo). Ex: \"piada\" → !piada",
+      "categoria": "Categoria livre. Ex: \"geral\", \"diversao\", \"admin\"",
+      "tipo": "\"texto\" | \"ia\" | \"tagall\" | \"flow\" (ver _tipos)",
+      "resposta": "Conteúdo do comando — texto, prompt IA, ou blocos flow separados por \\n---\\n",
+      "descricao": "Descrição curta que aparece no !menu (opcional)",
+      "apenasAdmin": "true → só admins do grupo podem usar",
+      "apenasGrupo": "true → só funciona em grupos (não funciona em DM)",
+      "apenasVip": "true → só utilizadores VIP podem usar",
+      "cooldownSegundos": "Segundos de espera entre usos por utilizador. 0 = sem limite"
+    },
+    "_variaveis": {
+      "{nome}": "Nome do utilizador que enviou a mensagem",
+      "{numero}": "Número de telemóvel do utilizador (ex: 351912345678)",
+      "{args}": "Tudo o que foi escrito depois do comando",
+      "{arg1}..{arg9}": "Palavras individuais dos argumentos",
+      "{alvo}": "Primeiro @mencionado ou primeira palavra dos args",
+      "{grupo}": "Nome do grupo (vazio em DMs)",
+      "{totalMembros}": "Número de membros do grupo (0 em DMs)",
+      "{hora}": "Hora actual (HH:MM) no fuso configurado",
+      "{data}": "Data actual (DD/MM/AAAA) no fuso configurado",
+      "{dia}": "Dia da semana (ex: Segunda-feira)",
+      "{saudacao}": "Bom dia / Boa tarde / Boa noite conforme a hora",
+      "{bot}": "Nome do bot configurado",
+      "{prefix}": "Prefixo configurado no bot (ex: !)",
+      "{respostaCitada}": "Texto da mensagem citada (vazio se não houver citação)",
+      "{random:A|B|C}": "Escolhe aleatoriamente entre as opções separadas por |"
+    },
+    "_condicionais": {
+      "{se:args}...{/se}": "Mostra o bloco só se o utilizador enviou argumentos",
+      "{se:grupo}...{/se}": "Mostra o bloco só se a mensagem vier de um grupo",
+      "{se:vip}...{/se}": "Mostra o bloco só se o utilizador for VIP",
+      "{se:citacao}...{/se}": "Mostra o bloco só se o utilizador citou uma mensagem",
+      "{se:admin}...{/se}": "Mostra o bloco só se o utilizador for admin ou dono"
+    },
+    "_tipos": {
+      "texto": "Responde com o texto da resposta (suporta variáveis e condicionais)",
+      "ia": "Usa a IA configurada; o campo resposta é o prompt base enviado à IA",
+      "tagall": "Marca todos os membros do grupo; o campo resposta é a mensagem",
+      "flow": "Sequência de blocos separados por \\n---\\n (ver _blocos_flow)"
+    },
+    "_blocos_flow": {
+      "[REACT:emoji]": "Reage à mensagem com o emoji. Ex: [REACT:🔥]",
+      "[DELAY:segundos]": "Aguarda N segundos (máx 10). Ex: [DELAY:2]",
+      "[TAGALL:mensagem]": "Marca todos os membros. Ex: [TAGALL:Atenção pessoal!]",
+      "[IA:prompt]": "Gera texto com IA. Ex: [IA:Conta uma piada sobre {args}]",
+      "[CMD:outro]": "Encadeia outro comando. Ex: [CMD:saudacao]",
+      "[API:url]": "Chama uma API (GET) e mete a RESPOSTA no texto (pode estar no meio da frase). Ex: [API:https://api.site.com/dados]",
+      "[API:url|campo]": "Igual, mas extrai um campo do JSON (suporta a.b.c e índices). Ex: 🌡️ [API:https://wttr.in/{args}?format=j1|current_condition.0.temp_C]°C",
+      "[IMG:url|legenda]": "Envia uma IMAGEM de um URL (legenda opcional, variáveis no URL). Ex: [IMG:https://api.site.com/foto?q={args}|Aqui tens!]",
+      "[VID:url|legenda]": "Envia um VÍDEO de um URL. Ex: [VID:https://site.com/clip.mp4]",
+      "[AUDIO:url]": "Envia ÁUDIO de um URL. (usa [VOZ:url] para mensagem de voz/PTT)",
+      "texto normal": "Qualquer outro texto (com variáveis) é enviado como mensagem"
+    },
+    "_exemplo_flow": "Flow com 3 passos: [REACT:🎲]\\n---\\n[DELAY:1]\\n---\\nSorteado: {random:Ana|João|Pedro}!",
+    "_exemplo_api": "Comando de clima (tipo flow): [REACT:🌤️]\\n---\\n🌡️ *{args}*: [API:https://wttr.in/{args}?format=j1|current_condition.0.temp_C]°C",
+    "_exemplo_imagem": "Comando que envia imagem (tipo flow): [IMG:https://cataas.com/cat|Miau! 🐱]"
+  },
+  "_exemplo": {
+    "nome": "exemplo",
+    "categoria": "geral",
+    "tipo": "texto",
+    "resposta": "👋 Olá {nome}!{se:args} Disseste: *{args}*{/se}{se:grupo}\\n🏠 Grupo: *{grupo}*{/se}\\n\\n🎲 Resultado: {random:Opção A|Opção B|Opção C}",
+    "descricao": "Comando de exemplo — podes apagar ou editar",
+    "apenasAdmin": false,
+    "apenasGrupo": false,
+    "apenasVip": false,
+    "cooldownSegundos": 0,
+    "criadoPor": "config",
+    "criadoEm": "2026-08-03T11:33:34.728Z"
+  }
+}
