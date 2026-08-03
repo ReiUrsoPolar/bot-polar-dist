@@ -75,7 +75,13 @@ auto_atualizar() {
         done
         if [ -n "$EXTRACTED" ]; then
           if command -v rsync >/dev/null 2>&1; then
-            rsync -a \
+            # -a inclui preservar dono/grupo/permissões (-o -g -p). Num painel o
+            # processo não pode fazer isso e o rsync rebenta com:
+            #   rename "patches/.baileys.cjs.XXXX" -> "patches/baileys.cjs":
+            #   Operation not permitted (1)
+            # …e sai com o código 23, dando a actualização como falhada mesmo
+            # tendo copiado tudo. Copia-se o conteúdo, não os atributos.
+            rsync -rlt --omit-dir-times --no-perms --no-owner --no-group \
               --exclude='config/bot.json' \
               --exclude='config/ia.json' \
               --exclude='config/apis.json' \
@@ -105,11 +111,11 @@ auto_atualizar() {
                     case "$cnome" in
                       bot.json|ia.json|apis.json|grupos.json|licenca-bind.json|licenca-inst.json|loja.json|menus|msgs) continue ;;
                     esac
-                    rm -rf "./config/$cnome" && cp -a "$cf" "./config/$cnome"
+                    rm -rf "./config/$cnome" && cp -r "$cf" "./config/$cnome"
                   done
                   continue ;;
               esac
-              rm -rf "./$nome" && cp -a "$item" "./$nome"
+              rm -rf "./$nome" && cp -r "$item" "./$nome"
             done
           fi
           # Forçar timestamp de package.json para agora para que verificar_deps detete a mudança
