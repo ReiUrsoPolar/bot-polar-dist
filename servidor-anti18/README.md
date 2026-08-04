@@ -89,6 +89,7 @@ Variáveis de ambiente, se os veredictos não te agradarem:
 | `ANTI18_LIMIAR_SOMADO` | `0.85` | porn+hentai juntos, quando o modelo se divide |
 | `ANTI18_LIMITE_MIN` | `120` | pedidos por minuto por IP |
 | `PORT` | `8787` | porta |
+| `ANTI18_HOST` | `0.0.0.0` | interface. Atrás de proxy põe `127.0.0.1` |
 
 **Subir** os números = apaga menos, deixa passar mais.
 **Descer** = apaga mais, com mais risco de apagar o que não devia.
@@ -104,4 +105,13 @@ são classificadas em memória e deitadas fora — mas passam pela tua máquina.
 vendes o bot a terceiros, diz-lhes.
 
 **Põe-no atrás de HTTPS** se for acessível pela internet. Sem isso, o token e as
-imagens viajam em claro.
+imagens viajam em claro. Com Caddy chega isto:
+
+```
+anti18.o-teu-dominio.com {
+  reverse_proxy localhost:8787
+}
+```
+
+E depois `ANTI18_HOST=127.0.0.1` no serviço — senão a porta em claro continua
+alcançável pelo IP e o HTTPS é decorativo.

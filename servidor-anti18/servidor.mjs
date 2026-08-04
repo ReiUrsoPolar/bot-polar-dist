@@ -21,6 +21,10 @@ import * as nsfw from 'nsfwjs'
 import sharp from 'sharp'
 
 const PORTA = Number(process.env.PORT || process.env.ANTI18_PORT || 8787)
+// Atrás de um proxy (Caddy/nginx) põe ANTI18_HOST=127.0.0.1: senão a porta em
+// claro fica alcançável pelo IP e qualquer um salta o HTTPS por completo.
+// O padrão continua aberto para quem corre isto sem proxy nenhum.
+const HOST = process.env.ANTI18_HOST || '0.0.0.0'
 const TOKEN = process.env.ANTI18_TOKEN || ''
 const MAX_BYTES = 8 * 1024 * 1024      // 8 MB: acima disto não é foto de grupo
 
@@ -154,7 +158,7 @@ const servidor = createServer(async (req, res) => {
   }
 })
 
-servidor.listen(PORTA, () => {
-  console.log(`✓ anti +18 a ouvir na porta ${PORTA}`)
+servidor.listen(PORTA, HOST, () => {
+  console.log(`✓ anti +18 a ouvir em ${HOST}:${PORTA}`)
   console.log(`  saúde: http://localhost:${PORTA}/saude`)
 })
