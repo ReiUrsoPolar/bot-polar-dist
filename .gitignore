@@ -66,3 +66,6 @@ polar-license-api/npx
 
 # grafo de conhecimento local (graphify)
 graphify-out/
+
+# deps do servidor anti+18 (instalam-se na VPS)
+servidor-anti18/node_modules/
