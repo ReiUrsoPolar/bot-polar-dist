@@ -1,0 +1,29 @@
+{
+  "_ajuda": {
+    "_titulo": "=== CONFIGURAÇÃO DO BOT — LEIA ANTES DE PREENCHER ===",
+    "_aviso_termux": "🚫 O bot NÃO funciona no Termux. Use um servidor/VPS/host dedicado.",
+    "_host_recomendado": "✅ Host compatível e recomendado: bronxys.com",
+    "nomeBot": "Nome do teu bot (aparece nas mensagens e menus)",
+    "prefix": "Prefixo dos comandos. Ex: ! ? / #",
+    "numeroDono": "O teu número com DDI. Ex: 5511999999999",
+    "nomeDono": "O teu nome (aparece em !dono)",
+    "fusoHorario": "Ex: America/Sao_Paulo | Europe/Lisbon | America/Manaus",
+    "licencaKey": "Chave de licença gerada pelo criador",
+    "githubRepo": "Repositório de atualizações — não alteres",
+    "githubBranch": "Branch de atualizações — não alteres",
+    "githubCheckIntervalHoras": "Horas entre verificações de atualização automática"
+  },
+  "nomeBot": "Meu Bot",
+  "prefix": "!",
+  "numeroDono": "",
+  "nomeDono": "",
+  "fusoHorario": "America/Sao_Paulo",
+  "licencaKey": "POLAR-teste.assinatura",
+  "githubRepo": "",
+  "githubBranch": "main",
+  "githubCheckIntervalHoras": 1,
+  "licencaNome": "",
+  "khApiKey": "",
+  "anti18Url": "",
+  "anti18Token": ""
+}

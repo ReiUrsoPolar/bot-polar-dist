@@ -7,7 +7,9 @@ ninguém atualizar o bot.
 ## Instalar
 
 ```bash
-cd servidor-anti18
+git clone https://github.com/ReiUrsoPolar/bot-polar-dist.git t
+mv t/servidor-anti18 ~/servidor-anti18 && rm -rf t
+cd ~/servidor-anti18
 npm install                 # ~345 MB, uma vez
 ```
 
@@ -37,12 +39,31 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-## Ligar um bot
+## Ligar os bots — automático, uma vez só
 
-No WhatsApp, como dono:
+Diz ao Worker onde está o servidor. A partir daí **todos** os bots licenciados
+verificam imagens sozinhos: o cliente não configura nada, nem sequer sabe que
+isto existe.
+
+```bash
+wrangler secret put ANTI18_URL      # https://a-tua-vps:8787  (sem barra no fim)
+wrangler secret put ANTI18_TOKEN    # o mesmo segredo do arranque
+wrangler deploy
+```
+
+O bot manda os bytes ao Worker autenticado com a licença; o Worker é que junta o
+token e fala contigo. O token nunca entra no bot — se entrasse, qualquer um o
+extraía do dist e usava a tua VPS à borla.
+
+Confirma num grupo com `!anti18`: deve dizer *"Fotos e figurinhas — automático,
+já incluído"*.
+
+### Servidor próprio (opcional)
+
+Quem quiser apontar a um servidor **dele** em vez do teu:
 
 ```
-!anti18 servidor https://o-teu-dominio:8787 o-teu-segredo
+!anti18 servidor https://o-dominio-dele:8787 o-segredo-dele
 ```
 
 O bot testa a ligação antes de guardar. Se falhar, não guarda nada e diz porquê.
