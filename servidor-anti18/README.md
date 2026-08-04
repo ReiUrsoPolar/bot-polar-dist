@@ -75,7 +75,30 @@ curl -H "X-Anti18-Token: o-teu-segredo" http://localhost:8787/saude
 ```
 
 ```json
-{"ok":true,"analisadas":128,"adultos":3,"erros":0,"ligadoHa":"3600s"}
+{"ok":true,"analisadas":128,"adultos":3,"erros":0,"ligadoHa":"3600s",
+ "msPorImagem":420,"backend":"tensorflow"}
+```
+
+`msPorImagem` é medido, não declarado — é a única forma honesta de saber se o
+backend nativo está mesmo a ser usado.
+
+## Se estiver lento
+
+`backend: "cpu"` e `msPorImagem` acima de ~1500 significa TensorFlow em
+JavaScript puro. O backend nativo é ~5x mais rápido:
+
+```bash
+cd ~/servidor-anti18 && npm install @tensorflow/tfjs-node && systemctl restart anti18
+```
+
+Se a compilação falhar (precisa de ferramentas de build), não faz mal — o
+servidor continua a funcionar com o que tem. Depois de reiniciar, confirma no
+`/saude` que `backend` passou a `tensorflow` **e** que `msPorImagem` desceu. Se o
+backend mudou mas o tempo não, o npm instalou duas cópias do `tfjs-core` e o
+nsfwjs está a usar a antiga:
+
+```bash
+cd ~/servidor-anti18 && rm -rf node_modules package-lock.json && npm install
 ```
 
 ## Afinar

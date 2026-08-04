@@ -16,9 +16,22 @@
 // descubra o endereço gastava o teu CPU a classificar imagens dela.
 
 import { createServer } from 'http'
-import * as tf from '@tensorflow/tfjs'
 import * as nsfw from 'nsfwjs'
 import sharp from 'sharp'
+
+// O backend nativo (@tensorflow/tfjs-node) classifica ~5x mais depressa que o
+// JavaScript puro — numa VPS modesta são ~3 s contra ~0,6 s por imagem, e nesses
+// segundos a foto fica no grupo. É dependência OPCIONAL de propósito: compila
+// código nativo e nem toda a máquina o consegue construir. Sem ele nada quebra,
+// só fica mais lento.
+let tf, BACKEND
+try {
+  tf = await import('@tensorflow/tfjs-node')
+  BACKEND = 'nativo (tfjs-node)'
+} catch {
+  tf = await import('@tensorflow/tfjs')
+  BACKEND = 'JavaScript puro — instala @tensorflow/tfjs-node para ~5x mais rápido'
+}
 
 const PORTA = Number(process.env.PORT || process.env.ANTI18_PORT || 8787)
 // Atrás de um proxy (Caddy/nginx) põe ANTI18_HOST=127.0.0.1: senão a porta em
@@ -59,12 +72,12 @@ function decidir(previsoes) {
   return 'seguro'
 }
 
-console.log('a carregar o modelo…')
+console.log(`a carregar o modelo… (backend: ${BACKEND})`)
 const modelo = await nsfw.load()
 console.log('✓ modelo pronto')
 
 // ── Contadores (para o /saude) ────────────────────────────────────────
-let _total = 0, _adultos = 0, _erros = 0
+let _total = 0, _adultos = 0, _erros = 0, _msTotal = 0
 const _arranque = Date.now()
 
 // Trava simples por IP: um bot mal configurado em ciclo não te derruba a VPS.
@@ -104,6 +117,11 @@ const servidor = createServer(async (req, res) => {
       adultos: _adultos,
       erros: _erros,
       ligadoHa: Math.round((Date.now() - _arranque) / 1000) + 's',
+      // Medido, não declarado: se o tfjs-node ficar com uma cópia própria do
+      // tfjs-core, o backend nativo regista-se numa e o nsfwjs usa a outra — o
+      // arranque anunciava "nativo" e nada tinha mudado. O tempo real não mente.
+      msPorImagem: _total ? Math.round(_msTotal / _total) : null,
+      backend: (() => { try { return tf.getBackend() } catch { return '?' } })(),
       limiares: LIMIARES,
     })
   }
@@ -132,6 +150,7 @@ const servidor = createServer(async (req, res) => {
   if (!buffer.length) return json(res, 400, { ok: false, erro: 'corpo vazio' })
 
   let tensor = null
+  const t0 = Date.now()
   try {
     const { data, info } = await sharp(buffer)
       .resize(224, 224, { fit: 'fill' }).removeAlpha().raw()
@@ -141,6 +160,7 @@ const servidor = createServer(async (req, res) => {
     const veredicto = decidir(previsoes)
 
     _total++
+    _msTotal += Date.now() - t0
     if (veredicto === 'adulto') _adultos++
 
     return json(res, 200, {

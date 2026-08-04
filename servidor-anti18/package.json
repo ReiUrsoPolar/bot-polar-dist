@@ -11,5 +11,9 @@
     "@tensorflow/tfjs": "^4.22.0",
     "nsfwjs": "^4.3.0",
     "sharp": "^0.35.3"
+  },
+  "//optionalDependencies": "tfjs-node compila código nativo e nem toda a máquina o constrói. Opcional de propósito: sem ele o servidor funciona na mesma, só mais lento. Versão presa à do tfjs para o npm não instalar duas cópias do tfjs-core — se instalar, o backend nativo regista-se numa e o nsfwjs usa a outra, e nada acelera.",
+  "optionalDependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0"
   }
 }
