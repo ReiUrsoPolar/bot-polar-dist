@@ -74,5 +74,19 @@
     "cooldownSegundos": 0,
     "criadoPor": "config",
     "criadoEm": "2026-08-03T11:33:34.728Z"
+  },
+  "menu2": {
+    "nome": "menu2",
+    "categoria": "custom",
+    "tipo": "texto",
+    "resposta": "ok",
+    "descricao": "",
+    "apenasAdmin": false,
+    "apenasGrupo": false,
+    "apenasVip": false,
+    "semPrefixo": false,
+    "cooldownSegundos": 0,
+    "criadoPor": "teste",
+    "criadoEm": "2026-08-05T23:02:02.538Z"
   }
 }
