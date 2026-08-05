@@ -13,8 +13,11 @@
   "devDependencies": {
     "vitest": "^1.0.0"
   },
+  "//optionalDependencies": "O @ffmpeg-installer não publica binário para android-arm64 (Termux) e a instalação falhava. Como opcional, o npm ignora a falha e o bot usa o ffmpeg do sistema — ver src/ffmpegPath.js.",
+  "optionalDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  },
   "dependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/generative-ai": "^0.21.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc14",
