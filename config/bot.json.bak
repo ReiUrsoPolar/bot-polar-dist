@@ -1,14 +1,16 @@
 {
   "_ajuda": {
     "_titulo": "=== CONFIGURAÇÃO DO BOT — LEIA ANTES DE PREENCHER ===",
-    "_aviso_termux": "🚫 O bot NÃO funciona no Termux. Use um servidor/VPS/host dedicado.",
-    "_host_recomendado": "✅ Host compatível e recomendado: bronxys.com",
+    "_aviso_termux": "📱 Funciona no Termux (Android): corre 'bash termux.sh' — vê o TERMUX.md. É mais lento e o Android pode suspender o processo; para uso a sério, VPS.",
+    "_host_recomendado": "✅ Corre em qualquer VPS com Node 18+ (ex: Contabo, Hostinger, DigitalOcean) ou no Termux.",
     "nomeBot": "Nome do teu bot (aparece nas mensagens e menus)",
     "prefix": "Prefixo dos comandos. Ex: ! ? / #",
     "numeroDono": "O teu número com DDI. Ex: 5511999999999",
     "nomeDono": "O teu nome (aparece em !dono)",
     "fusoHorario": "Ex: America/Sao_Paulo | Europe/Lisbon | America/Manaus",
     "licencaKey": "Chave de licença gerada pelo criador",
+    "licencaNome": "Nome da tua chave (alternativa à licencaKey) — o bot ativa-a sozinho",
+    "khApiKey": "A tua chave da KH Empire API (thekhempire.com/api) — para os comandos premium. Compra créditos no site.",
     "githubRepo": "Repositório de atualizações — não alteres",
     "githubBranch": "Branch de atualizações — não alteres",
     "githubCheckIntervalHoras": "Horas entre verificações de atualização automática"
@@ -18,12 +20,16 @@
   "numeroDono": "",
   "nomeDono": "",
   "fusoHorario": "America/Sao_Paulo",
-  "licencaKey": "POLAR-teste.assinatura",
-  "githubRepo": "",
-  "githubBranch": "main",
-  "githubCheckIntervalHoras": 1,
+  "licencaKey": "",
   "licencaNome": "",
   "khApiKey": "",
   "anti18Url": "",
-  "anti18Token": ""
+  "anti18Token": "",
+  "githubRepo": "",
+  "githubBranch": "main",
+  "githubCheckIntervalHoras": 1,
+  "antiinvisivelGlobal": {
+    "acao": "apagar",
+    "ativo": true
+  }
 }
