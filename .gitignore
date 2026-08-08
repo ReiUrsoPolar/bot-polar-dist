@@ -69,3 +69,6 @@ graphify-out/
 
 # deps do servidor anti+18 (instalam-se na VPS)
 servidor-anti18/node_modules/
+
+# Cópias de segurança que a config gera sozinha (ruído de execução)
+config/*.bak

@@ -18,7 +18,6 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc14",
     "aki-api": "^7.0.1",
