@@ -240,9 +240,18 @@ verificar_deps() {
       echo -e "${GREEN}  ✓  Dependências OK (Node ${NODE_VER})${NC}\n"
       return 0
     fi
-    # Último recurso: NÃO compilar dentro do sandbox systemd (make/node-gyp
-    # bloqueados → "Bad system call" → loop de crash). Sai com código 7 para o
-    # painel recompilar fora do sandbox e reiniciar o bot.
+    # No Termux não há painel nenhum para recompilar: sair aqui era matar o bot
+    # sem razão, porque o database.js já sabe cair para o SQLite embutido no
+    # Node. O suporte a Termux estava feito no código e ficava bloqueado no
+    # arranque.
+    if [ -n "$TERMUX_VERSION" ] || [ -d /data/data/com.termux ] || uname -o 2>/dev/null | grep -qi android; then
+      echo -e "${YELLOW}  ⚠  better-sqlite3 não compila no Termux — normal.${NC}"
+      echo -e "${CYAN}     O bot usa o SQLite embutido no Node. A continuar...${NC}\n"
+      return 0
+    fi
+    # Último recurso (servidor): NÃO compilar dentro do sandbox systemd
+    # (make/node-gyp bloqueados → "Bad system call" → loop de crash). Sai com
+    # código 7 para o painel recompilar fora do sandbox e reiniciar o bot.
     echo -e "${YELLOW}  ↗  better-sqlite3 precisa de recompilação (Node ${NODE_VER}) — a deixar o painel recompilar fora do sandbox...${NC}"
     exit 7
   else
