@@ -28,6 +28,7 @@
   "githubRepo": "",
   "githubBranch": "main",
   "githubCheckIntervalHoras": 1,
+  "turbo": false,
   "antiinvisivelGlobal": {
     "acao": "apagar",
     "ativo": true
