@@ -8,10 +8,14 @@
     "start": "node start.js",
     "start:sh": "bash start.sh",
     "dev": "node index.js",
-    "test": "vitest run",
-    "postinstall": "node patches/baileys.cjs || true"
+    "test": "eslint . && vitest run",
+    "postinstall": "node patches/baileys.cjs || true",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "eslint": "^10.0.0",
+    "globals": "^16.0.0",
     "vitest": "^1.0.0"
   },
   "//optionalDependencies": "O @ffmpeg-installer não publica binário para android-arm64 (Termux) e a instalação falhava. Como opcional, o npm ignora a falha e o bot usa o ffmpeg do sistema — ver src/ffmpegPath.js.",
