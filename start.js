@@ -129,8 +129,15 @@ function atualizarPorDownload() {
     const dentro = readdirSync(base).map(n => join(base, n)).filter(p => statSync(p).isDirectory())[0]
     if (!dentro) throw new Error('arquivo vazio')
 
-    copiarPorCima(dentro, process.cwd())
-    log(C.verde, '  ✓  Atualizado!')
+    const _falhados = copiarPorCima(dentro, process.cwd())
+    if (_falhados?.length) {
+      // O bot está actualizado e coerente; o que falhou são extras (patches,
+      // README…). Dizer quais, em vez de fingir que correu tudo bem.
+      log(C.amarelo, `  ⚠  Actualizado, mas ${_falhados.length} item(ns) não foram substituídos:`)
+      for (const x of _falhados.slice(0, 5)) log(C.cinza, `     · ${x}`)
+    } else {
+      log(C.verde, '  ✓  Atualizado!')
+    }
     return true
   } catch (e) {
     log(C.vermelho, `  ✗  Não consegui atualizar (${e.message}). O bot arranca na versão actual.`)
@@ -141,25 +148,68 @@ function atualizarPorDownload() {
 }
 
 /** Copia a versão nova por cima, deixando intacto tudo o que é do cliente. */
-export function copiarPorCima(origem, destino) {
-  for (const nome of readdirSync(origem)) {
-    if (INTOCAVEIS.has(nome)) continue
-    const de = join(origem, nome), para = join(destino, nome)
+// O CÓDIGO DO BOT É COPIADO PRIMEIRO, E UMA FALHA NUM EXTRA NÃO PÁRA TUDO.
+//
+// Isto percorria a pasta por ordem alfabética e rebentava à primeira falha:
+//
+//   config → index.js → package.json → patches → src → start.js
+//
+// Num painel onde a pasta `patches` estava só de leitura, o cpSync dava EPERM
+// exactamente a meio: o index.js JÁ era o novo e o src/ ainda era o antigo. O
+// bot ficava com um index.js a importar módulos que não existiam e não
+// arrancava de todo — muito pior do que não ter actualizado.
+//
+// Visto em produção:
+//   ✗ Não consegui atualizar (EPERM ... '/home/server/patches')
+//   ERROR [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/server/src/plugins.js'
+//
+// Agora o `src` e o `index.js` vão à frente e sempre juntos. Assim, mesmo que
+// tudo o resto falhe, o bot fica coerente — e a actualização seguinte apanha
+// o que faltou. É o que faz isto recuperar sozinho.
+// O start.js está aqui de propósito. Sem ele, uma correcção NESTE ficheiro
+// nunca chegava a quem já ficou preso: o start.js antigo copia por ordem
+// alfabética, rebenta no 'patches' e nunca chega ao 's' de start.js — logo
+// repete o mesmo erro em todos os arranques, para sempre.
+const PRIMEIRO = ['src', 'index.js', 'start.js', 'package.json']
 
-    if (nome === 'config') {
-      // A pasta config tem ficheiros nossos (defaults) e ficheiros DELE.
-      mkdirSync(para, { recursive: true })
-      for (const cf of readdirSync(de)) {
-        if (CONFIG_INTOCAVEL.has(cf)) continue
-        cpSync(join(de, cf), join(para, cf), { recursive: true, force: true })
+// O  entra por parâmetro para os testes poderem forçar uma falha numa
+// entrada específica — sem isso, a garantia mais importante deste ficheiro (que
+// uma falha não deixa o bot misturado) não era testável.
+export function copiarPorCima(origem, destino, copiar = null) {
+  const _cp = copiar ?? ((de, para) => cpSync(de, para, { recursive: true, force: true }))
+  const entradas = readdirSync(origem).filter(n => !INTOCAVEIS.has(n))
+  // os críticos primeiro, pela ordem em que estão em PRIMEIRO
+  entradas.sort((a, b) => {
+    const ia = PRIMEIRO.indexOf(a), ib = PRIMEIRO.indexOf(b)
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+  })
+
+  const falhados = []
+  for (const nome of entradas) {
+    const de = join(origem, nome), para = join(destino, nome)
+    try {
+      if (nome === 'config') {
+        // A pasta config tem ficheiros nossos (defaults) e ficheiros DELE.
+        mkdirSync(para, { recursive: true })
+        for (const cf of readdirSync(de)) {
+          if (CONFIG_INTOCAVEL.has(cf)) continue
+          try { _cp(join(de, cf), join(para, cf)) }
+          catch (e) { falhados.push(`config/${cf}: ${e.code ?? e.message}`) }
+        }
+        continue
       }
-      continue
+      // force+recursive resolve também o caso de o destino ter o tipo trocado
+      // (pasta onde devia estar ficheiro), que rebentava a cópia.
+      try { rmSync(para, { recursive: true, force: true }) } catch {}
+      _cp(de, para)
+    } catch (e) {
+      // Uma entrada problemática não pode impedir o resto — sobretudo agora
+      // que os críticos já foram copiados.
+      falhados.push(`${nome}: ${e.code ?? e.message}`)
+      if (PRIMEIRO.includes(nome)) throw e   // estes são o bot: sem eles não vale a pena seguir
     }
-    // force+recursive resolve também o caso de o destino ter o tipo trocado
-    // (pasta onde devia estar ficheiro), que rebentava a cópia.
-    try { rmSync(para, { recursive: true, force: true }) } catch {}
-    cpSync(de, para, { recursive: true, force: true })
   }
+  return falhados
 }
 
 // ── Dependências ──────────────────────────────────────────────────────
