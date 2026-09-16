@@ -299,9 +299,41 @@ function aplicarPatches() {
   if (existsSync(p)) spawnSync(process.execPath, [p], { stdio: 'ignore' })
 }
 
+/**
+ * O Node desta hospedagem chega para correr o bot?
+ *
+ * Isto é a causa do "o bot funciona numa host e na outra não". Com Node antigo
+ * a validação da licença rebenta (usa Ed25519 por JWK e Buffer 'base64url', que
+ * só existem em Node moderno) e o bot dizia "chave corrompida" — o cliente lia
+ * aquilo, achava que a chave estava má e vinha reclamar da licença, quando o
+ * problema era a hospedagem. O Baileys 7 também exige Node 20+.
+ *
+ * Melhor dizê-lo aqui, em três linhas claras, do que deixá-lo descobrir pelo
+ * caminho errado.
+ */
+function verificarNode() {
+  const maior = parseInt(process.versions.node.split('.')[0], 10)
+  if (maior >= 20) return
+  console.log('')
+  log(C.vermelho, '  ╭────────────────────────────────────────────────────────╮')
+  log(C.vermelho, '  │   ✖  HOSPEDAGEM INCOMPATÍVEL — Node demasiado antigo   │')
+  log(C.vermelho, '  ╰────────────────────────────────────────────────────────╯')
+  console.log('')
+  log(C.amarelo, `     Esta hospedagem tem Node ${process.version} — o bot precisa de Node 20+.`)
+  log(C.verde,   '     A TUA LICENÇA ESTÁ BOA. O problema é a hospedagem.')
+  console.log('')
+  log(C.cinza,   '     Como resolver:')
+  log(C.cinza,   '       1. Pede à tua host para pôr Node 20 (ou mais recente)')
+  log(C.cinza,   '       2. Ou, se tiveres acesso:  nvm install 20 && nvm use 20')
+  log(C.cinza,   '       3. Ou muda para uma hospedagem com Node atual')
+  console.log('')
+  process.exit(1)
+}
+
 // ── Arranque ──────────────────────────────────────────────────────────
 function principal() {
   banner()
+  verificarNode()   // antes de tudo: sem Node 20+ nada disto funciona
   if (!existsSync('index.js')) {
     log(C.vermelho, '  ✗  Não encontro o index.js.')
     log(C.cinza,    '     Corre este comando DENTRO da pasta do bot (a que tem o index.js).')

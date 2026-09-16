@@ -30,4 +30,20 @@ if ! command -v node >/dev/null 2>&1; then
   fi
 fi
 
+# O start.js também verifica a versão do Node — mas escrito em JavaScript
+# moderno, um Node muito antigo nem consegue lê-lo: morre com um SyntaxError
+# que não diz nada a ninguém. Aqui, ainda em bash, dá para o dizer em condições.
+NODE_MAIOR=$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)
+case "$NODE_MAIOR" in ''|*[!0-9]*) NODE_MAIOR=0 ;; esac
+if [ "$NODE_MAIOR" -lt 20 ]; then
+  echo ""
+  echo "  ✖  HOSPEDAGEM INCOMPATÍVEL — o Node desta host é demasiado antigo."
+  echo "     Tem Node v${NODE_MAIOR} e o bot precisa de Node 20 ou superior."
+  echo ""
+  echo "     A TUA LICENÇA ESTÁ BOA — o problema é a hospedagem."
+  echo "     Pede ao suporte da host para atualizar o Node (ou muda de host)."
+  echo ""
+  exit 1
+fi
+
 exec node start.js "$@"
