@@ -15,7 +15,7 @@
 //
 // Nunca toca no config, na sessão do WhatsApp nem na base de dados.
 
-import { spawnSync } from 'node:child_process'
+import { spawnSync, execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, cpSync, readdirSync, statSync, mkdtempSync, renameSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -186,7 +186,7 @@ function atualizarPorDownload() {
 // nunca chegava a quem já ficou preso: o start.js antigo copia por ordem
 // alfabética, rebenta no 'patches' e nunca chega ao 's' de start.js — logo
 // repete o mesmo erro em todos os arranques, para sempre.
-const PRIMEIRO = ['src', 'index.js', 'start.js', 'package.json']
+const PRIMEIRO = ['src', 'index.js', 'start.js', 'package.json', 'package-lock.json']
 
 // Prepara tudo antes de substituir. O backup fica no mesmo disco para usar
 // rename, sem apagar os originais antes de a cópia terminar. Não é proteção
@@ -274,13 +274,28 @@ export function copiarPorCima(origem, destino, copiar = null) {
 }
 
 // ── Dependências ──────────────────────────────────────────────────────
-// Só o hash das DEPENDÊNCIAS, não do package.json inteiro: uma actualização
-// que mude apenas scripts ou versão não obriga a reinstalar tudo.
-function hashDeps() {
+// Não inclui scripts/versão do manifesto, mas inclui o lockfile: corrigir só
+// a origem ou integridade de um pacote também exige sincronizar dependências.
+export function hashDeps(cwd = process.cwd()) {
   try {
-    const p = JSON.parse(readFileSync('package.json', 'utf8'))
-    return createHash('md5').update(JSON.stringify([p.dependencies ?? {}, p.optionalDependencies ?? {}])).digest('hex')
+    const p = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8'))
+    const lock = existsSync(join(cwd, 'package-lock.json')) ? readFileSync(join(cwd, 'package-lock.json'), 'utf8') : ''
+    return createHash('sha256').update(JSON.stringify([p.dependencies ?? {}, p.optionalDependencies ?? {}, p.overrides ?? {}, lock])).digest('hex')
   } catch { return '' }
+}
+
+// O !atualizar usa o start.js NOVO no disco, não uma cópia antiga já importada
+// pelo processo WhatsApp. execFile mantém caminhos com espaços seguros e não
+// bloqueia a receção de mensagens enquanto o npm instala.
+export function instalarAtualizacao({ cwd = process.cwd(), executar = execFile } = {}) {
+  return new Promise((resolve, reject) => {
+    executar(process.execPath, [join(cwd, 'start.js'), '--install'],
+      { cwd, encoding: 'utf8', timeout: 300000, maxBuffer: 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (err) reject(new Error(String(stderr || stdout || err.message).trim()))
+        else resolve(String(stdout || '').trim())
+      })
+  })
 }
 function sqliteFunciona() {
   const r = spawnSync(process.execPath,
@@ -446,6 +461,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (process.argv.includes('--check')) {
     const { reportInstall } = await import('./scripts/check-install.mjs')
     process.exitCode = reportInstall()
+  } else if (process.argv.includes('--install')) {
+    // Instala apenas: não descarrega outra atualização, não lê a licença e
+    // não liga ao WhatsApp. O próprio painel controla o reinício depois.
+    try {
+      verificarNode()
+      instalarDeps()
+      aplicarPatches()
+      try { writeFileSync(join('node_modules', '.pkg_hash'), hashDeps()) } catch {}
+    } catch (e) { log(C.vermelho, `  ✗  ${e.message}`); process.exitCode = 1 }
   } else {
     try { principal() }
     catch (e) { log(C.vermelho, `  ✗  ${e.message}`); process.exitCode = 1 }
