@@ -72,3 +72,5 @@ servidor-anti18/node_modules/
 
 # Cópias de segurança que a config gera sozinha (ruído de execução)
 config/*.bak
+.playwright-cli/
+output/playwright/

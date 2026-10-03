@@ -16,8 +16,8 @@
 // Nunca toca no config, na sessão do WhatsApp nem na base de dados.
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, cpSync, readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, cpSync, readdirSync, statSync, mkdtempSync, renameSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
@@ -43,13 +43,6 @@ const CONFIG_INTOCAVEL = new Set([
   'licenca-bind.json', 'licenca-inst.json', 'loja.json', 'menus', 'msgs',
 ])
 
-function correr(cmd, args, opts = {}) {
-  return spawnSync(cmd, args, { stdio: 'inherit', ...opts })
-}
-function saida(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: 'utf8' })
-  return r.status === 0 ? String(r.stdout ?? '').trim() : null
-}
 function temComando(cmd) {
   const r = spawnSync(cmd, ['--version'], { encoding: 'utf8' })
   // Só o ENOENT diz "não existe". Ir pelo código de saída dava falsos negativos
@@ -77,25 +70,47 @@ function banner() {
 // ── Actualizar ────────────────────────────────────────────────────────
 // Com git é limpo e rápido. Sem git (o caso normal de quem só descompactou o
 // zip) descarrega-se o tar.gz e copia-se por cima, saltando o que é do cliente.
+export function atualizarGitSeguro({ cwd = process.cwd(), repo = DIST_REPO, branch = DIST_BRANCH, executar = spawnSync } = {}) {
+  if (!/^[\w-]+\/[\w.-]+$/.test(repo) || !/^[\w][\w./-]*$/.test(branch) || branch.includes('..')) {
+    return { estado: 'bloqueado', motivo: 'Repositório ou branch inválido.' }
+  }
+  const git = args => executar('git', args, { cwd, encoding: 'utf8', timeout: 60000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } })
+  const ok = r => !r.error && r.status === 0
+  const valor = r => String(r.stdout || '').trim()
+  const head = git(['rev-parse', '--verify', 'HEAD'])
+  if (!ok(head)) return { estado: 'indisponivel' }
+  const remoto = git(['remote', 'get-url', 'origin'])
+  const permitidos = [`https://github.com/${repo}.git`, `https://github.com/${repo}`, `git@github.com:${repo}.git`]
+  if (!ok(remoto) || !permitidos.includes(valor(remoto))) {
+    return { estado: 'bloqueado', motivo: 'Este clone não aponta para a distribuição esperada. O repositório foi preservado.' }
+  }
+  const status = git(['status', '--porcelain', '--untracked-files=all'])
+  if (!ok(status) || valor(status)) return { estado: 'bloqueado', motivo: 'Existem alterações locais ou não foi possível verificá-las. Guarda-as antes de atualizar.' }
+  const fetch = git(['fetch', '--quiet', 'origin', branch])
+  if (!ok(fetch)) return { estado: 'sem_rede', motivo: 'Não foi possível obter a atualização; a versão atual foi mantida.' }
+  const alvo = git(['rev-parse', '--verify', 'FETCH_HEAD^{commit}'])
+  const antes = valor(head), depois = valor(alvo)
+  if (!ok(alvo) || !/^[a-f0-9]{40,64}$/.test(depois)) return { estado: 'bloqueado', motivo: 'A versão recebida não é válida.' }
+  if (antes === depois) return { estado: 'atualizado', antes, depois }
+  if (!ok(git(['merge-base', '--is-ancestor', antes, depois]))) return { estado: 'bloqueado', motivo: 'O histórico divergiu. É necessária uma atualização assistida, sem apagar alterações.' }
+  // Sem reset --hard: o Git também verifica alterações surgidas depois do status.
+  const merge = git(['merge', '--ff-only', '--no-edit', depois])
+  if (!ok(merge)) {
+    const erro = new Error('O Git não concluiu a atualização. Arranque interrompido; verifica o estado da instalação antes de reiniciar.')
+    erro.updateRecoveryRequired = true
+    throw erro
+  }
+  return { estado: 'instalado', antes, depois }
+}
+
 function autoAtualizar() {
   log(C.amarelo, '  ↻  A verificar atualizações...')
-  const url = `https://github.com/${DIST_REPO}.git`
-
   if (existsSync('.git') && temComando('git')) {
-    const remoto = saida('git', ['remote', 'get-url', 'origin'])
-    if (remoto !== url) {
-      correr('git', ['remote', 'set-url', 'origin', url], { stdio: 'ignore' })
-      log(C.amarelo, '  ↻  Remote corrigido para o repositório público.')
-    }
-    const antes = saida('git', ['rev-parse', 'HEAD'])
-    correr('git', ['fetch', '--quiet', 'origin', DIST_BRANCH], { stdio: 'ignore' })
-    const depois = saida('git', ['rev-parse', `origin/${DIST_BRANCH}`])
-    if (!depois) { log(C.vermelho, '  ✗  Não consegui contactar o GitHub (sem rede?).'); return false }
-    if (antes === depois) { log(C.verde, `  ✓  Já estás na versão mais recente. (${depois.slice(0, 7)})`); return false }
-    // reset --hard e não pull: o dist tem histórico próprio (force push).
-    correr('git', ['reset', '--hard', `origin/${DIST_BRANCH}`], { stdio: 'ignore' })
-    log(C.verde, `  ✓  Atualizado! (${String(antes).slice(0, 7)} → ${depois.slice(0, 7)})`)
-    return true
+    const r = atualizarGitSeguro()
+    if (r.estado === 'instalado') { log(C.verde, `  ✓  Atualizado! (${r.antes.slice(0, 7)} → ${r.depois.slice(0, 7)})`); return true }
+    if (r.estado === 'atualizado') log(C.verde, '  ✓  Já estás na versão mais recente.')
+    else log(C.amarelo, `  ⚠  ${r.motivo || 'Git indisponível; atualização não aplicada.'}`)
+    return false
   }
   return atualizarPorDownload()
 }
@@ -140,6 +155,7 @@ function atualizarPorDownload() {
     }
     return true
   } catch (e) {
+    if (e.updateRecoveryRequired) throw e
     log(C.vermelho, `  ✗  Não consegui atualizar (${e.message}). O bot arranca na versão actual.`)
     return false
   } finally {
@@ -172,6 +188,48 @@ function atualizarPorDownload() {
 // repete o mesmo erro em todos os arranques, para sempre.
 const PRIMEIRO = ['src', 'index.js', 'start.js', 'package.json']
 
+// Prepara tudo antes de substituir. O backup fica no mesmo disco para usar
+// rename, sem apagar os originais antes de a cópia terminar. Não é proteção
+// contra corte de energia; cobre falhas de cópia e substituição reportadas pelo SO.
+export function substituirConjunto(origem, destino, nomes, copiar, mover = renameSync) {
+  destino = resolve(destino)
+  const area = mkdtempSync(join(destino, '.polar-update-'))
+  const novos = join(area, 'new'), antigos = join(area, 'old')
+  mkdirSync(novos)
+  mkdirSync(antigos)
+  const alterados = []
+  let conservar = false
+  try {
+    for (const nome of nomes) copiar(join(origem, nome), join(novos, nome))
+    for (const nome of nomes) {
+      const para = join(destino, nome), backup = join(antigos, nome)
+      const estado = { nome, guardado: false, instalado: false }
+      alterados.push(estado)
+      if (existsSync(para)) { mover(para, backup); estado.guardado = true }
+      mover(join(novos, nome), para)
+      estado.instalado = true
+    }
+  } catch (erro) {
+    const falhas = []
+    for (const estado of alterados.reverse()) {
+      try {
+        const para = join(destino, estado.nome)
+        if (estado.instalado) mover(para, join(novos, estado.nome))
+        if (estado.guardado) mover(join(antigos, estado.nome), para)
+      } catch { falhas.push(estado.nome) }
+    }
+    if (falhas.length) {
+      conservar = true
+      const falha = new Error(`Reposição incompleta (${falhas.join(', ')}). Arranque interrompido. Cópia de recuperação: ${area}`)
+      falha.updateRecoveryRequired = true
+      throw falha
+    }
+    throw erro
+  } finally {
+    if (!conservar) { try { rmSync(area, { recursive: true, force: true }) } catch {} }
+  }
+}
+
 // O  entra por parâmetro para os testes poderem forçar uma falha numa
 // entrada específica — sem isso, a garantia mais importante deste ficheiro (que
 // uma falha não deixa o bot misturado) não era testável.
@@ -185,7 +243,10 @@ export function copiarPorCima(origem, destino, copiar = null) {
   })
 
   const falhados = []
+  // src/index/start/package são preparados e substituídos como um conjunto.
+  substituirConjunto(origem, destino, entradas.filter(n => PRIMEIRO.includes(n)), _cp)
   for (const nome of entradas) {
+    if (PRIMEIRO.includes(nome)) continue
     const de = join(origem, nome), para = join(destino, nome)
     try {
       if (nome === 'config') {
@@ -200,12 +261,12 @@ export function copiarPorCima(origem, destino, copiar = null) {
       }
       // force+recursive resolve também o caso de o destino ter o tipo trocado
       // (pasta onde devia estar ficheiro), que rebentava a cópia.
-      try { rmSync(para, { recursive: true, force: true }) } catch {}
-      _cp(de, para)
+      substituirConjunto(origem, destino, [nome], _cp)
     } catch (e) {
       // Uma entrada problemática não pode impedir o resto — sobretudo agora
       // que os críticos já foram copiados.
       falhados.push(`${nome}: ${e.code ?? e.message}`)
+      if (e.updateRecoveryRequired) throw e
       if (PRIMEIRO.includes(nome)) throw e   // estes são o bot: sem eles não vale a pena seguir
     }
   }
@@ -226,12 +287,22 @@ function sqliteFunciona() {
     ['-e', "new (require('./node_modules/better-sqlite3'))(':memory:').close()"], { encoding: 'utf8' })
   return r.status === 0
 }
-function instalarDeps() {
+export function sqliteDisponivel(executar = spawnSync) {
+  const r = executar(process.execPath, ['--input-type=module', '-e',
+    "let DB; try { DB = (await import('better-sqlite3')).default; new DB(':memory:').close(); } catch { DB = (await import('./src/sqliteCompat.js')).default; const db = new DB(':memory:'); db.prepare('SELECT 1').get(); db.close(); }"],
+  { encoding: 'utf8', timeout: 15000 })
+  return !r.error && r.status === 0
+}
+export function instalarDeps({ instalar = correrShell, preparar = binarioSqlite, verificar = sqliteDisponivel } = {}) {
   log(C.amarelo, '  ↓  A instalar/atualizar dependências...')
   // --ignore-scripts: dentro de painéis com sandbox, compilar módulos nativos
   // rebenta ("Bad system call"). O binário do sqlite vem pronto logo a seguir.
-  correrShell('npm install --ignore-scripts --no-fund --no-audit --prefer-offline')
-  binarioSqlite()
+  const resultado = instalar('npm install --omit=dev --ignore-scripts --no-fund --no-audit --prefer-offline')
+  if (resultado.error || resultado.status !== 0) {
+    throw new Error('A instalação das dependências falhou. Verifica a ligação e o erro do npm acima; o bot não foi iniciado.')
+  }
+  if (!verificar()) preparar()
+  if (!verificar()) throw new Error('SQLite indisponível. Usa Node 22.13+ ou 24, ou instala o binário better-sqlite3 compatível com o host.')
   log(C.verde, '  ✓  Dependências prontas!\n')
 }
 function binarioSqlite() {
@@ -260,12 +331,7 @@ function verificarDeps() {
     try { writeFileSync(marca, agora) } catch {}
     return
   }
-  if (!sqliteFunciona() && !binarioSqlite()) {
-    if (EH_TERMUX) {
-      log(C.amarelo, '  ⚠  O better-sqlite3 não compila no Termux — é normal.')
-      log(C.ciano,   '     O bot usa o SQLite embutido no Node. A continuar...\n')
-      return
-    }
+  if (!sqliteDisponivel() && !(binarioSqlite() && sqliteDisponivel())) {
     // Num painel, quem recompila fora do sandbox é o painel: sai com 7, que é
     // o código que ele conhece.
     log(C.amarelo, '  ↗  O better-sqlite3 precisa de recompilação — a deixar o painel tratar disso...')
@@ -376,4 +442,12 @@ function principal() {
 
 // Só arranca quando é ESTE o ficheiro corrido. Assim os testes podem importar a
 // cópia — a parte que mexe nos ficheiros do cliente — sem levantar um bot.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) principal()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (process.argv.includes('--check')) {
+    const { reportInstall } = await import('./scripts/check-install.mjs')
+    process.exitCode = reportInstall()
+  } else {
+    try { principal() }
+    catch (e) { log(C.vermelho, `  ✗  ${e.message}`); process.exitCode = 1 }
+  }
+}

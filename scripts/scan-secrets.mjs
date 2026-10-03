@@ -58,7 +58,7 @@ for (const file of walk(ROOT)) {
     if (FALSO_POSITIVO.test(linha)) continue
     for (const { nome, re } of PADROES) {
       if (re.test(linha)) {
-        achados.push({ file: relative(ROOT, file), linha: i + 1, nome, trecho: linha.trim().slice(0, 80) })
+        achados.push({ file: relative(ROOT, file), linha: i + 1, nome })
       }
     }
   }
@@ -68,7 +68,7 @@ if (achados.length) {
   console.error('\n❌ SEGREDO(S) DETETADO(S) — o build foi CANCELADO para não vazar no arquivo de venda:\n')
   for (const a of achados) {
     console.error(`  • ${a.nome}`)
-    console.error(`    ${a.file}:${a.linha}  →  ${a.trecho}`)
+    console.error(`    ${a.file}:${a.linha}  →  [conteúdo ocultado]`)
   }
   console.error('\nRemove o segredo do código (usa secrets/config gitignored) e tenta de novo.\n')
   process.exit(1)

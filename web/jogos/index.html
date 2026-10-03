@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Jogos Polar</title>
+<style>
+:root{color-scheme:light;--ink:#171717;--paper:#fff;--soft:#f2f2f2;--edge:#dedede;--muted:#636363;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}main{max-width:620px;margin:auto;padding:38px 22px 28px}header{border-bottom:1px solid var(--edge);padding-bottom:25px}.brand{font-size:12px;letter-spacing:.2em;font-weight:750;text-transform:uppercase}h1{font-size:clamp(30px,6vw,42px);font-weight:650;letter-spacing:-.045em;margin:15px 0 9px}p{line-height:1.6;color:var(--muted);margin:0}nav{display:flex;gap:8px;margin:26px 0 24px}button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--edge);background:var(--paper);border-radius:9px;min-height:46px;padding:10px 17px;transition:background .18s,transform .18s}button:hover{background:var(--soft)}button:active{transform:scale(.98)}button:focus-visible{outline:3px solid #777;outline-offset:3px}nav button{flex:1}nav button[aria-pressed=true],.primary{background:var(--ink);color:#fff;border-color:var(--ink)}.primary:hover{background:#353535}section[hidden]{display:none}.top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:15px}h2{font-size:22px;letter-spacing:-.02em;margin:0 0 4px}.stats{font-size:13px;color:var(--muted)}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;background:var(--soft);padding:11px;border-radius:12px}.card,.tile{aspect-ratio:1;min-height:0;display:grid;place-items:center;font-size:clamp(25px,7vw,39px);font-weight:650}.card{padding:0}.card[data-open=true]{background:var(--ink);color:white}.card[data-match=true]{background:#e2e2e2;color:var(--ink);border-color:transparent}.tile{border-radius:7px;background:#e3e3e3;color:#171717}.tile[data-filled=true]{background:#fff}.tile[data-big=true]{background:#282828;color:white}.tile{font-variant-numeric:tabular-nums}#board2048{touch-action:none;user-select:none}.status{min-height:42px;padding-top:16px;font-size:14px;color:var(--muted)}.arrows{display:flex;justify-content:center;gap:7px;margin-top:8px}.arrows button{min-width:54px;font-size:21px}#reflexPad{width:100%;min-height:250px;margin-top:10px;font-size:23px;font-weight:650;background:var(--soft)}#reflexPad[data-ready=true]{background:var(--ink);color:white}.small{font-size:12px}footer{border-top:1px solid var(--edge);margin-top:30px;padding-top:17px}#share{margin-top:10px}section{animation:enter .22s ease-out}@keyframes enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}@media(max-width:380px){main{padding:25px 14px}button{padding:9px 12px}.board{gap:6px}}
+</style>
+</head>
+<body>
+<main>
+  <header><span class="brand">Polar / pequenos jogos</span><h1>Uma pausa para jogar.</h1><p>Sem conta, anúncios ou downloads extra. Escolhe um jogo e começa.</p></header>
+  <nav aria-label="Escolher jogo"><button data-game="memoria" aria-pressed="true">Memória</button><button data-game="2048" aria-pressed="false">2048</button><button data-game="reflexo" aria-pressed="false">Reflexo</button></nav>
+  <section id="memoria"><div class="top"><div><h2>Encontra os pares</h2><div class="stats" id="memoryStats"></div></div><button id="newMemory">Recomeçar</button></div><div id="memoryBoard" class="board" aria-label="Cartas do jogo de memória"></div><p id="memoryStatus" class="status" role="status">Toca em duas cartas. Menos tentativas, melhor.</p></section>
+  <section id="2048" hidden><div class="top"><div><h2>Junta até 2048</h2><div class="stats" id="score2048"></div></div><button id="new2048">Recomeçar</button></div><div id="board2048" class="board" tabindex="0" aria-label="Tabuleiro 2048. Usa as setas ou desliza o dedo."></div><div class="arrows" aria-label="Direção"><button data-dir="left" aria-label="Esquerda">←</button><button data-dir="up" aria-label="Cima">↑</button><button data-dir="down" aria-label="Baixo">↓</button><button data-dir="right" aria-label="Direita">→</button></div><p id="status2048" class="status" role="status">Desliza ou usa as setas. Números iguais juntam-se.</p></section>
+  <section id="reflexo" hidden><div class="top"><div><h2>Quão rápido és?</h2><div class="stats" id="reflexStats"></div></div><button id="newReflex">Recomeçar</button></div><button id="reflexPad">Toca para começar</button><p id="reflexStatus" class="status" role="status">Espera por «Agora!» e toca. Não vale antecipar.</p></section>
+  <button id="share">Copiar resultado</button><p id="shareStatus" class="status" role="status"></p>
+  <footer><p class="small">Os recordes ficam apenas neste navegador. Não há ranking online, apostas ou ligação às moedas do bot. A primeira partida de memória usa o desafio do dia (UTC).</p></footer>
+</main>
+<script id="polar-core">
+globalThis.PolarJogos = (() => {
+  function mesclarLinha(line) {
+    const values = line.filter(Boolean), out = []; let points = 0;
+    for (let i = 0; i < values.length; i++) {
+      if (values[i] === values[i+1]) { const n = values[i] * 2; out.push(n); points += n; i++; }
+      else out.push(values[i]);
+    }
+    while (out.length < 4) out.push(0);
+    return { line: out, points };
+  }
+  function mover2048(board, direction) {
+    if (!['left','right','up','down'].includes(direction)) throw new Error('Direção inválida');
+    const next = board.slice(); let points = 0;
+    for (let a = 0; a < 4; a++) {
+      const ids = Array.from({length:4}, (_,b) => direction === 'left' ? a*4+b : direction === 'right' ? a*4+3-b : direction === 'up' ? b*4+a : (3-b)*4+a);
+      const result = mesclarLinha(ids.map(i => board[i])); points += result.points;
+      ids.forEach((id,i) => { next[id] = result.line[i]; });
+    }
+    return { board: next, points, moved: next.some((n,i) => n !== board[i]) };
+  }
+  function baralhar(items, random = Math.random) {
+    const out = items.slice();
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(random() * (i+1)); [out[i],out[j]] = [out[j],out[i]]; }
+    return out;
+  }
+  function randomDia(day) {
+    let seed = 0; for (const c of day) seed = (Math.imul(seed,31) + c.charCodeAt(0)) | 0;
+    return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15,1 | seed); t ^= t + Math.imul(t ^ t >>> 7,61 | t); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  return { mesclarLinha, mover2048, baralhar, randomDia };
+})();
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), core = PolarJogos;
+  let game = 'memoria', memory = [], opened = [], pairs = 0, turns = 0, memoryTimer, round = 0;
+  let board = [], score = 0, reflexTimer, reflexState = 'idle', readyAt = 0, lastReflex = null, pointer = null;
+  const records = (() => { try { const r = JSON.parse(localStorage.getItem('polar-jogos-v1') || '{}'); return r && typeof r === 'object' ? r : {}; } catch { return {}; } })();
+  function record(name,value,lower = false) {
+    if (!Number.isFinite(value) || value < 0) return;
+    if (!Number.isFinite(records[name]) || (lower ? value < records[name] : value > records[name])) {
+      records[name] = value; try { localStorage.setItem('polar-jogos-v1',JSON.stringify(records)); } catch {}
+    }
+  }
+  function statsMemory() { $('memoryStats').textContent = `${turns} tentativas · ${pairs}/8 pares · Recorde: ${records.memoria ?? '—'}`; }
+  function startMemory() {
+    clearTimeout(memoryTimer); opened = []; pairs = 0; turns = 0;
+    const symbols = ['★','☀','♣','◆','♫','☂','♥','☾'];
+    memory = core.baralhar([...symbols,...symbols],core.randomDia(new Date().toISOString().slice(0,10) + ':' + round++));
+    $('memoryBoard').replaceChildren();
+    memory.forEach((symbol,i) => {
+      const button = document.createElement('button'); button.className = 'card'; button.textContent = '?'; button.setAttribute('aria-label',`Carta ${i+1}, fechada`);
+      button.onclick = () => {
+        if (opened.length === 2 || button.dataset.match || opened.some(x => x.i === i)) return;
+        button.textContent = symbol; button.dataset.open = 'true'; button.setAttribute('aria-label',`Carta ${i+1}: ${symbol}`); opened.push({i,button,symbol});
+        if (opened.length < 2) return;
+        turns++;
+        if (opened[0].symbol === opened[1].symbol) {
+          opened.forEach(x => { x.button.dataset.match = 'true'; x.button.disabled = true; }); opened = []; pairs++;
+          if (pairs === 8) { record('memoria',turns,true); $('memoryStatus').textContent = `Feito! Encontraste os oito pares em ${turns} tentativas.`; }
+        } else memoryTimer = setTimeout(() => { opened.forEach(x => { x.button.textContent = '?'; delete x.button.dataset.open; x.button.setAttribute('aria-label',`Carta ${x.i+1}, fechada`); }); opened = []; },700);
+        statsMemory();
+      };
+      $('memoryBoard').append(button);
+    });
+    $('memoryStatus').textContent = 'Toca em duas cartas. Menos tentativas, melhor.'; statsMemory();
+  }
+  function spawn() { const ids = board.map((n,i) => n === 0 ? i : -1).filter(i => i >= 0); if (ids.length) board[ids[Math.floor(Math.random()*ids.length)]] = Math.random() < .9 ? 2 : 4; }
+  function draw2048() {
+    $('board2048').replaceChildren();
+    board.forEach(n => { const tile = document.createElement('div'); tile.className = 'tile'; tile.textContent = n || ''; tile.dataset.filled = String(n > 0); tile.dataset.big = String(n >= 128); tile.setAttribute('aria-label',n ? String(n) : 'Vazio'); $('board2048').append(tile); });
+    $('score2048').textContent = `${score} pontos · Recorde: ${records['2048'] ?? 0}`;
+  }
+  function start2048() { board = Array(16).fill(0); score = 0; spawn(); spawn(); draw2048(); $('status2048').textContent = 'Desliza ou usa as setas. Números iguais juntam-se.'; }
+  function move(direction) {
+    const result = core.mover2048(board,direction); if (!result.moved) return;
+    board = result.board; score += result.points; spawn(); record('2048',score); draw2048();
+    if (board.some(n => n >= 2048)) $('status2048').textContent = 'Chegaste a 2048! Podes continuar.';
+    if (!['left','right','up','down'].some(dir => core.mover2048(board,dir).moved)) $('status2048').textContent = `Fim da partida: ${score} pontos. Mais uma?`;
+  }
+  function resetReflex() { clearTimeout(reflexTimer); reflexState = 'idle'; delete $('reflexPad').dataset.ready; $('reflexPad').textContent = 'Toca para começar'; $('reflexStats').textContent = `Recorde: ${records.reflexo != null ? records.reflexo + ' ms' : '—'}`; }
+  $('reflexPad').onclick = () => {
+    if (reflexState === 'idle') {
+      reflexState = 'waiting'; $('reflexPad').textContent = 'Espera…'; $('reflexStatus').textContent = 'Só toca quando aparecer «Agora!».';
+      reflexTimer = setTimeout(() => { reflexState = 'ready'; readyAt = performance.now(); $('reflexPad').dataset.ready = 'true'; $('reflexPad').textContent = 'Agora!'; },1800+Math.random()*2400);
+    } else if (reflexState === 'waiting') { resetReflex(); $('reflexStatus').textContent = 'Foi cedo demais. Tenta outra vez.'; }
+    else { lastReflex = Math.round(performance.now()-readyAt); record('reflexo',lastReflex,true); resetReflex(); $('reflexStatus').textContent = `${lastReflex} ms. Isto mede reação neste dispositivo, não um ranking oficial.`; }
+  };
+  document.querySelectorAll('[data-game]').forEach(button => button.onclick = () => {
+    game = button.dataset.game; resetReflex(); $('shareStatus').textContent = '';
+    document.querySelectorAll('[data-game]').forEach(b => b.setAttribute('aria-pressed',String(b === button)));
+    document.querySelectorAll('section').forEach(section => { section.hidden = section.id !== game; });
+  });
+  document.querySelectorAll('[data-dir]').forEach(button => button.onclick = () => move(button.dataset.dir));
+  document.addEventListener('keydown',event => { const dir = {ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'}[event.key]; if (game === '2048' && dir) { event.preventDefault(); move(dir); } });
+  $('board2048').onpointerdown = event => { pointer = { x:event.clientX,y:event.clientY,id:event.pointerId }; $('board2048').setPointerCapture(event.pointerId); };
+  $('board2048').onpointerup = event => { if (!pointer || pointer.id !== event.pointerId) return; const dx = event.clientX-pointer.x,dy = event.clientY-pointer.y; pointer = null; if (Math.max(Math.abs(dx),Math.abs(dy)) > 24) move(Math.abs(dx)>Math.abs(dy) ? dx>0?'right':'left' : dy>0?'down':'up'); };
+  $('board2048').onpointercancel = () => { pointer = null; };
+  document.addEventListener('visibilitychange',() => { if (document.hidden) resetReflex(); });
+  $('newMemory').onclick = startMemory; $('new2048').onclick = start2048; $('newReflex').onclick = resetReflex;
+  $('share').onclick = async () => {
+    const result = game === 'memoria' ? pairs === 8 ? `${turns} tentativas no jogo de memória` : null : game === '2048' ? `${score} pontos no 2048` : lastReflex != null ? `${lastReflex} ms no Reflexo` : null;
+    if (!result) { $('shareStatus').textContent = 'Termina uma partida primeiro.'; return; }
+    const text = `Jogos Polar — ${result}. Resultado local, não verificado.`;
+    try { await navigator.clipboard.writeText(text); $('shareStatus').textContent = 'Copiado. Partilha apenas se quiseres.'; } catch { $('shareStatus').textContent = text; }
+  };
+  startMemory(); start2048(); resetReflex();
+})();
+</script>
+</body>
+</html>
