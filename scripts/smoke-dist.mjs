@@ -225,6 +225,45 @@ await comandoBotoes({ body: '!botoesoff', msg: { key: { remoteJid: '999@s.whatsa
   save: () => { throw new Error('Unauthorized button switch') },
 })
 assert.equal(deniedPreference, true)
+// Exercise the exact client package with its real persisted configuration, no
+// test/VPS flags, and no WhatsApp connection. Previously only alo was covered.
+const { loadConfig, saveConfig } = await mod('config.js')
+const { sendBotoes } = await mod('botoes.js')
+const oldTestFlag = process.env.POLAR_NATIVE_BUTTONS_TEST
+try {
+  delete process.env.POLAR_NATIVE_BUTTONS
+  delete process.env.POLAR_NATIVE_BUTTONS_TEST
+  const clientChat = '120000102@g.us'
+  const clientOwner = '351911111111'
+  const clientRequest = { key: { id: 'smoke-owner', remoteJid: clientChat, participant: clientOwner + '@s.whatsapp.net' } }
+  let textReplies = 0
+  const clientSocket = { ...fakeSock, sendMessage: async () => { textReplies++; return { key: { id: 'text' } } } }
+  instalarBotoesNativos(clientSocket, criarEscopoTeste(clientSocket, { nome: '', modo: '' }))
+  saveConfig({ numeroDono: clientOwner, botoesAtivos: false, botoesDesligados: false })
+  assert.equal(botoesNativosAtivos(clientSocket, clientChat), false)
+  await comandoBotoes({ body: '!botoeson', msg: clientRequest, sock: clientSocket,
+    reply: async () => {}, cfg: loadConfig(),
+  })
+  assert.equal(loadConfig().botoesAtivos, true)
+  assert.equal(await sendBotoes(clientSocket, clientChat, {
+    texto: '❄️ Menu do cliente', botoes: [{ texto: 'Menu', id: '!menu' }],
+  }, { device: 'android', menuInterativo: true }), true)
+  assert.ok(nativeCard.body.text.includes('❄️ Menu do cliente'))
+  assert.equal(textReplies, 0)
+  const restartedSocket = { ...fakeSock }
+  instalarBotoesNativos(restartedSocket, criarEscopoTeste(restartedSocket, { nome: '', modo: '' }))
+  assert.equal(botoesNativosAtivos(restartedSocket, clientChat), true)
+  for (const jid of ['123@s.whatsapp.net', 'status@broadcast', 'abc@g.us']) assert.equal(botoesNativosAtivos(restartedSocket, jid), false)
+  await comandoBotoes({ body: '!botoesoff', msg: clientRequest, sock: clientSocket, reply: async () => {}, cfg: loadConfig() })
+  assert.equal(botoesNativosAtivos(restartedSocket, clientChat), false)
+  saveConfig({ numeroDono: '', botoesAtivos: false, botoesDesligados: false })
+} finally {
+  if (oldNativeFlag === undefined) delete process.env.POLAR_NATIVE_BUTTONS
+  else process.env.POLAR_NATIVE_BUTTONS = oldNativeFlag
+  if (oldTestFlag === undefined) delete process.env.POLAR_NATIVE_BUTTONS_TEST
+  else process.env.POLAR_NATIVE_BUTTONS_TEST = oldTestFlag
+}
+console.log('Smoke OK: cliente sem flags VPS, !botoeson persistido, cartão decorado, reinício e !botoesoff; sem envios reais.')
 const { criarFilaEnvio } = await mod('sendQueue.js')
 const queue = criarFilaEnvio({ gate: async () => {} })
 await queue.esperar(); queue.fechar()
@@ -249,7 +288,6 @@ await carregarPlugins()
 assert.ok(pluginDe('jogosweb'))
 const { default: games } = await import(pathToFileURL(resolve(root, 'src/plugins/jogosweb.js')).href)
 let sentGames = 0
-const { saveConfig } = await mod('config.js')
 // Check the real obfuscated package, without source-based discovery or network.
 const { parDaChave } = await mod('jidIdentity.js')
 const { updateContactsMap, resolvePhone, resolveUserKey, resolveDisplay, checkIsOwner } = await mod('auth.js')
