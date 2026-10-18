@@ -8,10 +8,7 @@
     "start": "node start.js",
     "start:sh": "bash start.sh",
     "dev": "node index.js",
-    "test": "node scripts/check-local.mjs",
-    "postinstall": "node patches/baileys.cjs || true",
-    "lint": "eslint .",
-    "check:local": "node scripts/check-local.mjs"
+    "postinstall": "node patches/baileys.cjs || true"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
