@@ -9,6 +9,6 @@
     "naoNaLista": "⚠️ Este comando não está na lista.",
     "liberados": "📋 Comandos liberados para membros:\n{lista}",
     "semLiberados": "📋 Nenhum comando liberado para membros.",
-    "usoModobot": "ℹ️ Uso: !modobot admin | !modobot todos"
+    "usoModobot": "ℹ️ *Modo do bot*\n\n• {prefix}modobot admin — só admins usam comandos\n• {prefix}modobot todos — todos usam comandos\n• {prefix}liberar sticker — liberar um comando para membros no modo admin\n• {prefix}restringir sticker — voltar a restringir esse comando\n• {prefix}liberados — ver os comandos liberados"
   }
 }

@@ -4,7 +4,7 @@
     "cardAviso": "⚠️ *ADVERTÊNCIA* ⚠️\n━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Utilizador:* @{num}\n📋 *Motivo:* {motivo}\n📅 *Data:* {data} às {hora}\n\n{cor} *Avisos:* [{filled}{empty}] *{total}/{max}*\n\n",
     "cardAvisoRestam": "_⚠️ Atenção: mais {restam} aviso{s} resulta em banimento automático!_",
     "cardAvisoLimite": "_🔨 Limite atingido — banimento a ser aplicado!_",
-    "cardBanimento": "🔨 *BANIMENTO AUTOMÁTICO* 🔨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Utilizador:* @{num}\n📋 *Motivo:* 3 avisos acumulados\n📋 *Último motivo:* {motivo}\n📅 *Data:* {data} às {hora}\n\n_O utilizador foi removido do grupo por exceder o limite de advertências._",
+    "cardBanimento": "🔨 *BANIMENTO AUTOMÁTICO* 🔨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Utilizador:* @{num}\n📋 *Motivo:* limite de advertências atingido\n📋 *Último motivo:* {motivo}\n📅 *Data:* {data} às {hora}\n\n_O utilizador foi removido do grupo por exceder o limite de advertências._",
     "cardListaVazio": "📋 *ADVERTÊNCIAS — @{num}*\n━━━━━━━━━━━━━━━━━━━━━\n\n✅ Este utilizador não tem advertências.",
     "cardListaCabecalho": "📋 *ADVERTÊNCIAS — @{num}*\n━━━━━━━━━━━━━━━━━━━━━\n\n",
     "cardListaLimiteAtingido": "_⛔ Limite atingido!_",

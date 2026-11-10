@@ -11,6 +11,8 @@ database/polar.db-wal
 database/backups/
 database/groups/
 database/lid_map.json
+database/lid_map.json.bak
+database/backgrounds/
 database/ia_memoria.json
 database/comandos_custom.json
 database/media/

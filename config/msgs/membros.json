@@ -1,7 +1,7 @@
 {
   "_info": "Mensagens de ações sobre membros (ban, kick, promoção).\n  Variáveis: {numero}",
   "membros": {
-    "banido": "✅ @{numero} foi *banido* e adicionado à lista negra.",
+    "banido": "✅ @{numero} foi *banido* do grupo.\n_Para não poder voltar a entrar: {prefix}blacklist add @membro_",
     "kickado": "✅ @{numero} foi *removido* do grupo.",
     "adicionado": "✅ {numero} foi *adicionado* ao grupo!",
     "promovido": "⬆️ @{numero} agora é *admin*!",
