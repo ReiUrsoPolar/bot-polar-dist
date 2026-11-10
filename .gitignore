@@ -76,3 +76,6 @@ servidor-anti18/node_modules/
 config/*.bak
 .playwright-cli/
 output/playwright/
+
+# Cópias que o !atualizar faz antes de mexer em ficheiros alterados
+.polar-backup/
